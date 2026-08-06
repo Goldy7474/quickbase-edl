@@ -1,0 +1,37 @@
+name: Update Quickbase EDL IPs
+
+on:
+  schedule:
+    - cron: '0 */6 * * *' # הרצה אוטומטית כל 6 שעות
+  workflow_dispatch: # מאפשר הרצה ידנית מתוך ממשק GitHub
+
+jobs:
+  update-edl:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Run Resolution Script
+        run: python update_ips.py
+
+      - name: Commit and Push if Changed
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add quickbase_ips.txt
+          
+          if git diff --staged --quiet; then
+            echo "No changes detected."
+          else
+            git commit -m "auto: update Quickbase IP list"
+            git push
+          fi
