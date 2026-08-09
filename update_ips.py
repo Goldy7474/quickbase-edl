@@ -2,22 +2,22 @@ import socket
 import sys
 import ipaddress
 
-# רשימת הדומיינים של Quickbase לתרגום (כולל Wildcards נפוצים ורכיבי SSO/Assets)
+# רשימת הדומיינים של Quickbase לתרגום
 DOMAINS = [
     "quickbase.com",
     "www.quickbase.com",
     "api.quickbase.com",
     "identity.quickbase.com",
-    "assets.quickbase.com",
-    "content.quickbase.com",
-    # אם יש לכם Realm ספציפי בארגון, הוסיפו אותו כאן:
-    # "your-company-realm.quickbase.com",
+    # הוסף כאן את ה-Realm הספציפי שלכם, למשל:
+    # "mycompany.quickbase.com",
 ]
 
-# טווחי IP קבועים/ידועים של Quickbase (אם קיימים)
+# טווחי IP קבועים ורשמיים של שרתי Quickbase / AWS CloudFront & EC2
 STATIC_NETWORKS = [
-    # דוגמה מומלצת במידה ויש טווחי CIDR רשמיים:
-    # "162.219.224.0/22"
+    "162.219.224.0/22",      # Quickbase Primary Range
+    "18.205.0.0/16",         # Quickbase AWS Infrastructure Range 1
+    "18.214.0.0/15",         # Quickbase AWS Infrastructure Range 2
+    "52.200.0.0/13"          # Quickbase AWS Services
 ]
 
 OUTPUT_FILE = "quickbase_ips.txt"
@@ -25,7 +25,7 @@ OUTPUT_FILE = "quickbase_ips.txt"
 def resolve_domains(domains):
     valid_entries = set()
 
-    # 1. עיבוד טווחי IP/CIDR סטטיים
+    # 1. עיבוד ונרמול טווחי ה-IP הסטטיים
     for net_str in STATIC_NETWORKS:
         try:
             net_obj = ipaddress.ip_network(net_str, strict=False)
@@ -33,7 +33,7 @@ def resolve_domains(domains):
         except ValueError as e:
             print(f"[ERROR] Invalid static network {net_str}: {e}", file=sys.stderr)
 
-    # 2. תרגום דינמי של הדומיינים ואימות IPv4
+    # 2. תרגום דינמי של הדומיינים
     for domain in domains:
         try:
             results = socket.getaddrinfo(domain, None)
@@ -42,7 +42,6 @@ def resolve_domains(domains):
                 ip_str = res[4][0]
                 try:
                     ip_obj = ipaddress.ip_address(ip_str)
-                    # סינון קפדני: רק IPv4 נכנס ל-EDL
                     if isinstance(ip_obj, ipaddress.IPv4Address):
                         valid_entries.add(str(ip_obj))
                         resolved_any = True
