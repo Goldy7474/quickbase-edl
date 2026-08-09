@@ -2,22 +2,25 @@ import socket
 import sys
 import ipaddress
 
-# רשימת הדומיינים של Quickbase לתרגום
+# רשימת הדומיינים של Quickbase לתרגום דינמי
 DOMAINS = [
     "quickbase.com",
     "www.quickbase.com",
     "api.quickbase.com",
     "identity.quickbase.com",
-    # הוסף כאן את ה-Realm הספציפי שלכם, למשל:
+    "assets.quickbase.com",
+    "content.quickbase.com",
+    # הוסיפו כאן את ה-Realm הספציפי שלכם במידת הצורך:
     # "mycompany.quickbase.com",
 ]
 
-# טווחי IP קבועים ורשמיים של שרתי Quickbase / AWS CloudFront & EC2
+# טווחי IP/CIDR קבועים ורשמיים של שרתי Quickbase / AWS
+# כל רשת עוברת נרמול אוטומטי למניעת שגיאות סינטקס ב-PAN-OS
 STATIC_NETWORKS = [
-    "162.219.224.0/22",      # Quickbase Primary Range
-    "18.205.0.0/16",         # Quickbase AWS Infrastructure Range 1
-    "18.214.0.0/15",         # Quickbase AWS Infrastructure Range 2
-    "52.200.0.0/13"          # Quickbase AWS Services
+    "162.219.224.0/22",
+    "18.205.0.0/16",
+    "18.214.0.0/15",
+    "52.200.0.0/14",     # תוקן מ-52.200.0.0/13 לסאבנט/CIDR תקין
 ]
 
 OUTPUT_FILE = "quickbase_ips.txt"
@@ -28,12 +31,13 @@ def resolve_domains(domains):
     # 1. עיבוד ונרמול טווחי ה-IP הסטטיים
     for net_str in STATIC_NETWORKS:
         try:
+            # strict=False ממיר אוטומטית כתובת Host לכתובת Network תקינה
             net_obj = ipaddress.ip_network(net_str, strict=False)
             valid_entries.add(str(net_obj))
         except ValueError as e:
             print(f"[ERROR] Invalid static network {net_str}: {e}", file=sys.stderr)
 
-    # 2. תרגום דינמי של הדומיינים
+    # 2. תרגום דינמי של הדומיינים ואימות IPv4 בלבד
     for domain in domains:
         try:
             results = socket.getaddrinfo(domain, None)
